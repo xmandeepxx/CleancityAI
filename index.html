@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#06131e">
+  <title>CleanCity AI | Municipal Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="auth-locked">
+  <!-- Supabase-authenticated login gate for the municipal dashboard -->
+  <section class="login-screen" id="loginScreen" aria-label="CleanCity AI login">
+    <div class="login-panel">
+      <div class="login-brand"><span class="brand-mark">⌁</span><div><strong>CleanCity <i>AI</i></strong><small>Municipal Waste Intelligence</small></div></div>
+      <div class="login-copy"><span class="eyebrow">CITY OPERATIONS PORTAL</span><h1>Welcome back</h1><p>Sign in to monitor bins, alerts, predictions, and collection routes.</p></div>
+      <form id="loginForm" class="login-form">
+        <label for="loginEmail">Work email</label>
+        <input id="loginEmail" type="email" placeholder="Enter email" required>
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" placeholder="Enter your password" required>
+        <button type="submit">Sign in to dashboard <span>→</span></button>
+        <small class="login-status" id="loginStatus" aria-live="polite"></small>
+      </form>
+      <div class="login-footer"><span>● Systems operational</span><span>Municipal Admin</span></div>
+    </div>
+    <div class="login-aside"><span class="eyebrow">SMARTER CITIES, CLEANER TOMORROW</span><h2>Every bin tells a story.</h2><p>Turn live waste signals into faster, cleaner city operations.</p><div class="login-stats"><span><b>7,500</b><small>Monitored bins</small></span><span><b>24/7</b><small>Live visibility</small></span></div></div>
+  </section>
+  <!-- Main navigation and admin account bar -->
+  <header class="topbar">
+    <a class="brand" href="#dashboard" aria-label="CleanCity AI home">
+      <span class="brand-mark">⌁</span>
+      <span><strong>CleanCity <i>AI</i></strong><small>Smarter Bins. Cleaner Tomorrow.</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary navigation">
+      <button class="nav-link active" data-view="Dashboard">⌂ <span>Dashboard</span></button>
+      <button class="nav-link" data-view="Live Bins">▣ <span>Live Bins</span></button>
+      <button class="nav-link" data-view="AI Predictions">▥ <span>AI Predictions</span></button>
+      <button class="nav-link" data-view="Collection Planner">▰ <span>Collection Planner</span></button>
+      <button class="nav-link" data-view="Analytics">⌁ <span>Analytics</span></button>
+      <button class="nav-link" data-view="Alerts">♧ <span>Alerts</span></button>
+    </nav>
+    <div class="account" id="accountMenu"><div class="account-control"><button class="account-trigger" type="button" aria-expanded="false"><span class="avatar"><img src="gov.webp" alt="Municipal Admin profile"></span><b>Municipal Admin</b><span>⌄</span></button><button class="logout-button" id="logoutButton" type="button">Log out</button></div><time id="currentDateTime" aria-label="Current date and time"></time></div>
+  </header>
+
+  <!-- Main dashboard content: KPIs, map, plans, alerts, and analytics -->
+  <main id="dashboard">
+    <section class="hero">
+      <div><h1>AI Powered Waste Management</h1><p>Real-time monitoring. Smarter decisions. Cleaner cities.</p></div>
+      <em>“Cleaner today<br>for a healthier tomorrow.” <span>⌁</span></em>
+    </section>
+
+    <!-- Dashboard KPI summary cards -->
+    <section class="stats" aria-label="Waste management summary">
+      <article class="stat-card green"><span class="stat-icon">▥</span><div><strong>7500</strong><b>Total Bins</b><small>+2% from last week</small></div></article>
+      <article class="stat-card red"><span class="stat-icon">♟</span><div><strong>525</strong><b>Critical Bins</b><small>-3 from yesterday</small></div></article>
+      <article class="stat-card amber"><span class="stat-icon">!</span><div><strong>375</strong><b>Predicted Overflow</b><small>within 6 hours</small></div></article>
+      <article class="stat-card blue"><span class="stat-icon">▰</span><div><strong>1050</strong><b>Collection Required</b><small>optimized by AI</small></div></article>
+      <article class="stat-card green"><span class="stat-icon">⌁</span><div><strong>2500</strong><b>Active Vehicles</b><small>on duty</small></div></article>
+      <article class="stat-card motto"><span>⌁</span><b>Cleaner Cities<br>Healthier People<br>Greener Tomorrow</b><strong>›</strong></article>
+    </section>
+
+    <!-- Live map, selected-bin details, collection plan, and alerts -->
+    <section class="workspace">
+      <article class="panel map-panel">
+        <div class="panel-head"><div><h2>♧ <span>Live Bin Map</span></h2><p>Real-time status of all smart bins across the city</p></div><div class="filters"><label>⌕ <input placeholder="Search location or bin ID..." aria-label="Search bins"></label><select aria-label="Filter zones"><option>All Zones</option><option>Market Area</option><option>Civil Lines</option></select></div></div>
+        <div class="map" id="map" aria-label="Interactive live bin map"></div>
+      </article>
+
+      <article class="panel bin-panel"><div class="panel-title"><h2>▥ Bin #27</h2><span class="live">● Live</span></div><p class="location">⌖ Market Area, Near City Mall</p><div class="bin-overview"><div class="bin-illustration"><div class="bin-lid"></div><div class="bin-shape"><b>0%</b></div></div><div class="metrics"><p>Fill Level <strong class="amber-text">0%</strong></p><p>Waste Weight <strong>0 kg</strong></p><p>Waste Rate <strong>4.2 kg/hr</strong></p><p>Capacity <strong>50 kg</strong></p><p>Last Collected <strong>9 Aug 2025, 8:30 AM</strong></p></div></div><div class="prediction"><h3>◉ AI Prediction</h3><p>Predicted Critical Time <strong id="predictedCriticalTime">4.8 hours</strong></p><p>Overflow Risk <strong id="overflowRisk" class="amber-text">● Medium</strong></p><p>Collection Priority <strong id="collectionPriority" class="danger-text">● High</strong></p><p>Recommendation <strong>Schedule Bin #27 in the next nearby collection route.</strong></p></div><div class="simulate"><b>Simulate Waste Arrival (Demo)</b><div><button data-add="-5">− &nbsp;5 kg</button><button data-add="5">+ &nbsp;5 kg</button></div></div></article>
+
+      <aside class="side-column"><article class="panel plan-panel"><div class="panel-title"><h2>♧ Today's Collection Plan</h2><a href="#plan">View All</a></div><table><thead><tr><th>Priority</th><th>Bin ID</th><th>Location</th><th>Fill %</th><th>Action</th></tr></thead><tbody><tr><td><i class="dot critical"></i></td><td>#100042</td><td>Railway Station</td><td>91%</td><td><button class="collect">Collect</button></td></tr><tr><td><i class="dot warning"></i></td><td>#100027</td><td>Market Area</td><td>62%</td><td><button class="collect">Collect</button></td></tr><tr><td><i class="dot warning"></i></td><td>#100018</td><td>University Area</td><td>84%</td><td><button class="collect">Collect</button></td></tr><tr><td><i class="dot amber-dot"></i></td><td>#100063</td><td>Green Park</td><td>35%</td><td><button class="wait">Wait</button></td></tr><tr><td><i class="dot normal"></i></td><td>#100012</td><td>Civil Lines</td><td>28%</td><td><button class="wait">Wait</button></td></tr></tbody></table><button class="route-button" id="routeButton">♧ &nbsp; Generate Optimized Route</button></article><article class="panel alerts-panel"><div class="panel-title"><h2>♧ Live Alerts</h2><a href="#alerts">View All</a></div><div class="alert"><i class="dot critical"></i><p><b>Bin #100042</b><small>Predicted overflow in 58 minutes.</small></p><time>10:12 AM</time></div><div class="alert"><i class="dot warning"></i><p><b>Bin #100027</b><small>Waste generation above normal.</small></p><time>09:48 AM</time></div><div class="alert"><i class="dot amber-dot"></i><p><b>Zone B</b><small>Collection vehicle approaching capacity.</small></p><time>09:30 AM</time></div><div class="alert"><i class="dot blue-dot"></i><p><b>Bin #100018</b><small>Unusual waste spike detected.</small></p><time>08:55 AM</time></div></article></aside>
+    </section>
+
+    <section class="charts"><article class="panel chart-card"><div class="panel-title"><h2>Waste Generation Trend</h2><select><option>Last 7 Days</option></select></div><div class="line-chart"><svg viewBox="0 0 500 150" preserveAspectRatio="none" aria-label="Waste trend chart"><path d="M25 115 L95 115 L165 65 L235 85 L305 108 L375 75 L455 68" fill="none" stroke="#27d49a" stroke-width="3"/><path d="M25 115 L95 115 L165 65 L235 85 L305 108 L375 75 L455 68 V140 H25Z" fill="rgba(39,212,154,.13)"/><g fill="#27d49a"><circle cx="25" cy="115" r="4"/><circle cx="95" cy="115" r="4"/><circle cx="165" cy="65" r="4"/><circle cx="235" cy="85" r="4"/><circle cx="305" cy="108" r="4"/><circle cx="375" cy="75" r="4"/><circle cx="455" cy="68" r="4"/></g></svg><div class="axis"><span>5 Aug</span><span>6 Aug</span><span>7 Aug</span><span>8 Aug</span><span>9 Aug</span><span>10 Aug</span><span>11 Aug</span></div></div></article><article class="panel chart-card"><h2>Area-wise Waste Generation</h2><div class="bars" id="areaWasteBars"><span data-area="Residential"><i></i><b>Residential</b></span><span data-area="Market"><i></i><b>Market</b></span><span data-area="Commercial"><i></i><b>Commercial</b></span><span data-area="Public Area"><i></i><b>Public Area</b></span><span data-area="Industrial"><i></i><b>Industrial</b></span></div></article><article class="panel chart-card composition"><h2>Waste Composition (Sample)</h2><div class="donut"><b>Total<br><strong>320 kg</strong></b></div><ul><li><i class="dot normal"></i>Organic <b>52%</b></li><li><i class="dot blue-dot"></i>Plastic <b>18%</b></li><li><i class="dot amber-dot"></i>Paper <b>12%</b></li><li><i class="dot purple-dot"></i>Metal <b>8%</b></li><li><i class="dot grey-dot"></i>Others <b>10%</b></li></ul></article><article class="panel quote-card"><em>“Technology<br>for a Cleaner<br>Tomorrow”</em><span>⌁</span></article></section>
+  </main>
+  <!-- Leaflet powers the interactive bin map; script.js contains dashboard behavior -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
