@@ -16,7 +16,9 @@ const logoutButton = document.querySelector('#logoutButton');
 const supabaseUrl = 'PASTE_SUPABASE_PROJECT_URL_HERE';
 const supabaseAnonKey = 'PASTE_SUPABASE_ANON_KEY_HERE';
 const hasSupabaseConfig = !supabaseUrl.startsWith('PASTE_') && !supabaseAnonKey.startsWith('PASTE_');
-const supabaseClient = hasSupabaseConfig ? window.supabase.createClient(supabaseUrl, supabaseAnonKey) : null;
+const supabaseClient = hasSupabaseConfig && window.supabase
+  ? window.supabase.createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 const localDemoEmail = 'mandeep@cleancity.gov';
 const localDemoPassword = 'MandeepMIT#2026!';
 
@@ -49,7 +51,14 @@ loginForm.addEventListener('submit', async (event) => {
     return;
   }
   loginStatus.textContent = 'Signing in...';
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  let authResult;
+  try {
+    authResult = await supabaseClient.auth.signInWithPassword({ email, password });
+  } catch (error) {
+    loginStatus.textContent = 'Login service unavailable. Try again later.';
+    return;
+  }
+  const { error } = authResult;
   if (error) {
     loginStatus.textContent = 'Invalid email or password.';
     return;
@@ -285,18 +294,20 @@ function keepPriorityBinsInPlan() {
 function renderCollectionView(priorityBins, routeGenerated = false) {
   const rows = priorityBins.map((bin, index) => `<tr><td>${index + 1}</td><td><i class="dot ${bin.status === 'critical' ? 'critical' : 'warning'}"></i> #${bin.id}</td><td>${bin.name}</td><td>${bin.fill}%</td><td>${formatPredictionTime(getPredictedCriticalMinutes(bin))}</td></tr>`).join('');
   const collectionView = document.querySelector('#collectionView');
-  collectionView.innerHTML = `<div class="collection-view-card"><div class="collection-view-head"><div><span class="eyebrow">AI COLLECTION CONTROL</span><h2>Priority Collection Bins</h2><p>${priorityBins.length} red and yellow bins require collection attention.</p></div><button class="collection-close" type="button" aria-label="Close collection view">×</button></div><div class="collection-view-actions"><button class="route-button collection-route" type="button">♧ &nbsp; ${routeGenerated ? 'Route Optimized' : 'Generate Optimized Route'}</button><span>${routeGenerated ? 'Sorted by predicted critical time' : 'Ready for route planning'}</span></div><div class="collection-view-layout"><div class="collection-table-wrap"><table><thead><tr><th>Priority</th><th>Bin</th><th>Location</th><th>Fill</th><th>Critical In</th></tr></thead><tbody>${rows}</tbody></table></div><div class="collection-map-slot"></div></div></div>`;
-  collectionView.querySelector('.collection-map-slot')?.remove();
+  const dashboardMap = document.querySelector('#map');
+  collectionView.innerHTML = `<div class="collection-view-card"><div class="collection-view-head"><div><span class="eyebrow">AI COLLECTION CONTROL</span><h2>Priority Collection Bins</h2><p>${priorityBins.length} red and yellow bins require collection attention.</p></div><button class="collection-close" type="button" aria-label="Close collection view">×</button></div><div class="collection-view-actions"><button class="route-button collection-route" type="button">♧ &nbsp; ${routeGenerated ? 'Route Optimized' : 'Generate Optimized Route'}</button><span>${routeGenerated ? 'Sorted by predicted critical time' : 'Ready for route planning'}</span></div><div class="collection-table-wrap"><table><thead><tr><th>Priority</th><th>Bin</th><th>Location</th><th>Fill</th><th>Critical In</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   const collectionCard = collectionView.querySelector('.collection-view-card');
   collectionCard.style.maxWidth = '1100px';
   collectionCard.style.padding = '18px';
   collectionCard.style.borderRadius = '12px';
   collectionView.querySelector('.collection-route').style.color = '#ffffff';
   collectionView.classList.add('open');
+  dashboardMap.style.visibility = 'hidden';
   collectionView.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
   collectionView.querySelector('.collection-close').addEventListener('click', () => {
     collectionView.classList.remove('open');
+    dashboardMap.style.visibility = '';
     collectionView.style.overflow = '';
     document.body.style.overflow = '';
   });
@@ -313,8 +324,9 @@ function setupCollectionView() {
   const collectionView = document.createElement('section');
   collectionView.id = 'collectionView';
   collectionView.className = 'collection-view';
-  collectionView.style.background = '#06131eff';
-  collectionView.style.backdropFilter = 'none';
+  collectionView.style.background = '#06131eb8';
+  collectionView.style.opacity = '1';
+  collectionView.style.backdropFilter = 'blur(5px)';
   document.body.append(collectionView);
   collectionView.addEventListener('click', (event) => {
     if (event.target === collectionView) collectionView.querySelector('.collection-close')?.click();
@@ -334,8 +346,9 @@ function setupAlertsView() {
   alertsView.id = 'alertsView';
   alertsView.className = 'collection-view';
   alertsView.style.zIndex = '9999';
-  alertsView.style.background = '#06131eff';
-  alertsView.style.backdropFilter = 'none';
+  alertsView.style.background = '#06131eb8';
+  alertsView.style.opacity = '1';
+  alertsView.style.backdropFilter = 'blur(5px)';
   document.body.append(alertsView);
   alertsView.addEventListener('click', (event) => {
     if (event.target === alertsView) alertsView.querySelector('.collection-close')?.click();
@@ -343,8 +356,6 @@ function setupAlertsView() {
 
   alertsViewAll.addEventListener('click', (event) => {
     event.preventDefault();
-    const dashboardMap = document.querySelector('#map');
-    dashboardMap.style.visibility = 'hidden';
     const today = new Date();
     const historyRows = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(today);
@@ -369,7 +380,6 @@ function setupAlertsView() {
       alertsView.classList.remove('open');
       alertsView.style.overflow = '';
       document.body.style.overflow = '';
-      dashboardMap.style.visibility = '';
     });
   });
 }
