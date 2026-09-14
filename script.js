@@ -133,15 +133,17 @@ const allLocations = [...highFootfallLocations, ...randomLocations];
 
 function createBins() {
   // Generate the prototype's 100 bins with fill, rate, status, and collection data.
+  const daySeed = Math.floor(Date.now() / 86400000);
   return Array.from({ length: 100 }, (_, index) => {
     const id = 100001 + index;
-    const isCritical = index % 8 === 0 || index === 41 || index === 83;
-    const isWarning = !isCritical && (index % 4 === 1 || index % 9 === 4);
+    const dailyOffset = (daySeed + index * 13) % 17;
+    const isCritical = (index + daySeed) % 8 === 0 || (index + daySeed) % 43 === 0;
+    const isWarning = !isCritical && ((index + daySeed) % 4 === 1 || (index + daySeed) % 9 === 4);
     const wasteWeight = isCritical
-      ? 50
+      ? 45 + ((dailyOffset * 2) % 6)
       : isWarning
-        ? 25 + ((index * 5) % 6)
-        : 1 + ((index * 37 + 11) % 20);
+        ? 25 + ((index * 5 + daySeed) % 11)
+        : 1 + ((index * 37 + daySeed + 11) % 20);
     const fill = getFillPercentage(wasteWeight, 50);
     const wasteRate = (1.5 + index * 0.1).toFixed(1);
     const collectedDay = 1 + (index % 28);
@@ -189,6 +191,13 @@ const overflowRisk = document.querySelector('#overflowRisk');
 const collectionPriority = document.querySelector('#collectionPriority');
 const selectedBinMarker = new Map();
 const areaWasteBars = document.querySelectorAll('#areaWasteBars [data-area]');
+const dashboardView = document.querySelector('#dashboard');
+const liveBinsView = document.querySelector('#liveBinsView');
+const liveBinsTable = document.querySelector('#liveBinsTable');
+const liveBinsSearch = document.querySelector('#liveBinsSearch');
+const liveListSearch = document.querySelector('#liveListSearch');
+const liveZoneFilter = document.querySelector('#liveZoneFilter');
+const liveStatusFilter = document.querySelector('#liveStatusFilter');
 
 // Marker appearance and per-bin status helpers.
 function createBinIcon(status) {
@@ -469,6 +478,53 @@ binLocations.forEach((bin) => {
 const demoBin = binLocations[0];
 showBin(demoBin, false);
 
+function liveStatusLabel(status) {
+  return status === 'normal' ? 'Normal' : status === 'warning' ? 'Attention' : status[0].toUpperCase() + status.slice(1);
+}
+
+function renderLiveBinsTable() {
+  const query = (liveListSearch.value || liveBinsSearch.value).trim().toLowerCase();
+  const zone = liveZoneFilter.value;
+  const status = liveStatusFilter.value;
+  const filteredBins = binLocations.filter((bin) => {
+    const matchesQuery = !query || String(bin.id).includes(query) || bin.name.toLowerCase().includes(query);
+    const matchesStatus = status === 'All Status' || liveStatusLabel(bin.status) === status;
+    const name = bin.name.toLowerCase();
+    const matchesZone = zone === 'All Zones' || (zone === 'Market Area' && /market|mall|connaught place|saket/.test(name)) || (zone === 'Civil Lines' && name.includes('civil lines'));
+    return matchesQuery && matchesStatus && matchesZone;
+  }).slice(0, 100);
+
+  liveBinsTable.innerHTML = filteredBins.map((bin) => `<tr data-bin-id="${bin.id}"><td>#${String(bin.id).slice(-2)}</td><td>${bin.name.replace(/, Zone \d+$/, '')}</td><td>${bin.fill}%</td><td><span class="live-status ${bin.status}">${liveStatusLabel(bin.status)}</span></td></tr>`).join('');
+  liveBinsTable.querySelectorAll('tr').forEach((row) => row.addEventListener('click', () => {
+    const bin = binById.get(row.dataset.binId);
+    if (bin) {
+      showBin(bin);
+      liveMap.setView([bin.lat, bin.lng], 13);
+    }
+  }));
+}
+
+const liveMap = L.map('liveBinsMap', { zoomControl: true, preferCanvas: true, zoomAnimation: false, fadeAnimation: false }).setView([28.6139, 77.2090], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(liveMap);
+binLocations.forEach((bin) => {
+  const marker = L.marker([bin.lat, bin.lng], { icon: createBinIcon(bin.status) }).addTo(liveMap);
+  marker.bindPopup(popupContent(bin));
+  marker.on('click', () => showBin(bin, false));
+});
+renderLiveBinsTable();
+[liveBinsSearch, liveListSearch, liveZoneFilter, liveStatusFilter].forEach((control) => control.addEventListener('input', renderLiveBinsTable));
+
+function switchView(viewName) {
+  const isLiveBins = viewName === 'Live Bins';
+  dashboardView.style.display = isLiveBins ? 'none' : '';
+  liveBinsView.classList.toggle('open', isLiveBins);
+  document.body.style.overflow = isLiveBins ? 'hidden' : '';
+  if (isLiveBins) window.requestAnimationFrame(() => {
+    liveMap.invalidateSize({ animate: false });
+    liveMap.setView([28.6139, 77.2090], 11, { animate: false });
+  });
+}
+
 function searchBin() {
   const bin = binById.get(searchInput.value.trim());
   if (bin) showBin(bin);
@@ -524,6 +580,15 @@ navLinks.forEach((link) => {
   link.addEventListener('click', () => {
     navLinks.forEach((item) => item.classList.remove('active'));
     link.classList.add('active');
+    switchView(link.dataset.view);
+  });
+});
+
+document.querySelectorAll('[data-return-view]').forEach((link) => {
+  link.addEventListener('click', () => {
+    const viewName = link.dataset.returnView;
+    const matchingNav = Array.from(navLinks).find((navLink) => navLink.dataset.view === viewName);
+    matchingNav?.click();
   });
 });
 
